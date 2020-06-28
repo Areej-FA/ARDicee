@@ -19,6 +19,8 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         
         // Set the view's delegate
         sceneView.delegate = self
+        
+        self.sceneView.debugOptions = [ARSCNDebugOptions.showFeaturePoints]
       
         
         sceneView.autoenablesDefaultLighting = true
@@ -44,9 +46,64 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         
         print("Session is supported = \(ARConfiguration.isSupported)")
         print("World Tracking is supported = \(ARWorldTrackingConfiguration.isSupported)")
+        
+        configuration.planeDetection = .horizontal
 
         // Run the view's session
         sceneView.session.run(configuration)
+        
+        
+    }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        
+        if let touch = touches.first{
+            let touchLocation = touch.location(in: sceneView)
+            
+            let results = sceneView.hitTest(touchLocation, types: .existingPlaneUsingExtent)
+            
+            if !results.isEmpty{
+                
+                print("touched the plane")
+                
+            }else{
+                
+                print("touched somewere else")
+                
+            }
+            
+        }
+        
+    }
+    
+  func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor){
+    if anchor is ARPlaneAnchor{
+        print("plan detected")
+        
+        let planAnchor = anchor as! ARPlaneAnchor
+        
+        let plan = SCNPlane(width: CGFloat(planAnchor.extent.x), height: CGFloat(planAnchor.extent.z))
+        
+        let planNode = SCNNode()
+        
+        planNode.position = SCNVector3(x: planAnchor.center.x, y: 0, z: planAnchor.center.z)
+        
+        planNode.transform = SCNMatrix4MakeRotation(-Float.pi/2, 1, 0, 0)
+        
+        let gridMaterial = SCNMaterial()
+        
+        gridMaterial.diffuse.contents = UIImage(named: "art.scnassets/grid.png")
+        
+        plan.materials = [gridMaterial]
+        
+        planNode.geometry = plan
+        
+        node.addChildNode(planNode)
+        
+    }else{
+        return
+    }
+    
     }
     
     override func viewWillDisappear(_ animated: Bool) {
