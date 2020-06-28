@@ -11,7 +11,7 @@ import SceneKit
 import ARKit
 
 class ViewController: UIViewController, ARSCNViewDelegate {
-
+    
     @IBOutlet var sceneView: ARSCNView!
     
     override func viewDidLoad() {
@@ -21,20 +21,11 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         sceneView.delegate = self
         
         self.sceneView.debugOptions = [ARSCNDebugOptions.showFeaturePoints]
-      
+        
         
         sceneView.autoenablesDefaultLighting = true
         
-        // Create a new scene
-        let diceScene = SCNScene(named: "art.scnassets/dicee.scn")!
         
-       if  let diceNode = diceScene.rootNode.childNode(withName: "Dice", recursively: true){
-        
-        diceNode.position = SCNVector3(0, 0, -0.1)
-        
-        sceneView.scene.rootNode.addChildNode(diceNode)
-        
-        }
         
     }
     
@@ -48,7 +39,7 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         print("World Tracking is supported = \(ARWorldTrackingConfiguration.isSupported)")
         
         configuration.planeDetection = .horizontal
-
+        
         // Run the view's session
         sceneView.session.run(configuration)
         
@@ -62,13 +53,23 @@ class ViewController: UIViewController, ARSCNViewDelegate {
             
             let results = sceneView.hitTest(touchLocation, types: .existingPlaneUsingExtent)
             
-            if !results.isEmpty{
+            if let hitResult = results.first {
                 
-                print("touched the plane")
+                print(hitResult)
                 
-            }else{
+                // Create a new scene
+                let diceScene = SCNScene(named: "art.scnassets/dicee.scn")!
                 
-                print("touched somewere else")
+                if  let diceNode = diceScene.rootNode.childNode(withName: "Dice", recursively: true){
+                    
+                    diceNode.position = SCNVector3(
+                        hitResult.worldTransform.columns.3.x,
+                        hitResult.worldTransform.columns.3.y + diceNode.boundingSphere.radius,
+                        hitResult.worldTransform.columns.3.z)
+                    
+                    sceneView.scene.rootNode.addChildNode(diceNode)
+                    
+                }
                 
             }
             
@@ -76,34 +77,36 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         
     }
     
-  func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor){
-    if anchor is ARPlaneAnchor{
-        print("plan detected")
+    func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor){
+        if anchor is ARPlaneAnchor{
+            print("plan detected")
+            
+            let planAnchor = anchor as! ARPlaneAnchor
+            
+            let plan = SCNPlane(width: CGFloat(planAnchor.extent.x), height: CGFloat(planAnchor.extent.z))
+            
+            let planNode = SCNNode()
+            
+            planNode.position = SCNVector3(x: planAnchor.center.x, y: 0, z: planAnchor.center.z)
+            
+            planNode.transform = SCNMatrix4MakeRotation(-Float.pi/2, 1, 0, 0)
+            
+            let gridMaterial = SCNMaterial()
+            
+            gridMaterial.diffuse.contents = UIImage(named: "art.scnassets/grid.png")
+            
+            plan.materials = [gridMaterial]
+            
+            planNode.geometry = plan
+            
+            node.addChildNode(planNode)
+            
+        }else{
+            
+            return
+            
+        }
         
-        let planAnchor = anchor as! ARPlaneAnchor
-        
-        let plan = SCNPlane(width: CGFloat(planAnchor.extent.x), height: CGFloat(planAnchor.extent.z))
-        
-        let planNode = SCNNode()
-        
-        planNode.position = SCNVector3(x: planAnchor.center.x, y: 0, z: planAnchor.center.z)
-        
-        planNode.transform = SCNMatrix4MakeRotation(-Float.pi/2, 1, 0, 0)
-        
-        let gridMaterial = SCNMaterial()
-        
-        gridMaterial.diffuse.contents = UIImage(named: "art.scnassets/grid.png")
-        
-        plan.materials = [gridMaterial]
-        
-        planNode.geometry = plan
-        
-        node.addChildNode(planNode)
-        
-    }else{
-        return
-    }
-    
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -112,5 +115,5 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         // Pause the view's session
         sceneView.session.pause()
     }
-
+    
 }
